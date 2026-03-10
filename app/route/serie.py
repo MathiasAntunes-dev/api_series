@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.model.serie import SerieModel
@@ -17,6 +17,34 @@ async def criar_serie(dados: SerieSchema, db: Session = Depends(get_db)):
 @serie.get("/series")
 async def listar_series(db: Session = Depends(get_db)):
     return db.query(SerieModel).all()
+
+@serie.put("/series/{id}")
+async def atualizar_serie(id: int, dados: SerieSchema, db: Session = Depends(get_db)):
+    serie = db.query(SerieModel).filter(SerieModel.id == id).first()
+
+    if not serie:
+        raise HTTPException(status_code=404, detail="Série não encontrada")
+
+    for campo, valor in dados.model_dump().items():
+        setattr(serie, campo, valor)
+
+    db.commit()
+    db.refresh(serie)
+
+    return serie
+
+
+@serie.delete("/series/{id}")
+async def deletar_serie(id: int, db: Session = Depends(get_db)):
+    serie = db.query(SerieModel).filter(SerieModel.id == id).first()
+
+    if not serie:
+        raise HTTPException(status_code=404, detail="Série não encontrada")
+
+    db.delete(serie)
+    db.commit()
+
+    return {"mensagem": "Série deletada com sucesso"}
 
 # Tarefa 1: Crie as rotas de atualização e deleção da API
 # Tarefa 2: Resolva todos os erros da sua aplicação
